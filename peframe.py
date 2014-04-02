@@ -36,10 +36,8 @@ import re
 import sys
 import string
 import os
-import math
 import time
 import datetime
-import subprocess
 import hashlib
 import json
 import codecs
@@ -83,7 +81,7 @@ def HASH():
 def INFO():
     return {
         "name": os.path.basename(exename),
-        "size": len(filebytes), 
+        "size": len(filebytes),
         "compile_time": "%s"%datetime.datetime.fromtimestamp(pe.FILE_HEADER.TimeDateStamp),
         "dll": unicode(pe.FILE_HEADER.IMAGE_FILE_DLL),
         "sections":pe.FILE_HEADER.NumberOfSections
@@ -93,7 +91,7 @@ def INFO():
 ## Check for version info & metadata
 def META():
     # TODO: should this be a dict instead?
-    res = {}   
+    res = {}
     if hasattr(pe, 'VS_VERSIONINFO'):
         if hasattr(pe, 'FileInfo'):
             for entry in pe.FileInfo:
@@ -177,7 +175,7 @@ def CHECKANTIVM():
         "Torpig VMM Trick": "\xE8\xED\xFF\xFF\xFF\x25\x00\x00\x00\xFF\x33\xC9\x3D\x00\x00\x00\x80\x0F\x95\xC1\x8B\xC1\xC3",
         "Torpig (UPX) VMM Trick": "\x51\x51\x0F\x01\x27\x00\xC1\xFB\xB5\xD5\x35\x02\xE2\xC3\xD1\x66\x25\x32\xBD\x83\x7F\xB7\x4E\x3D\x06\x80\x0F\x95\xC1\x8B\xC1\xC3"
         }
-    
+
     tricks = []
     for name, signature in VM_Sign.items():
         if filebytes.find(signature[::-1]) > -1:
@@ -221,7 +219,7 @@ def dump(obj, indentation=0):
 
     dump = []
     res = {'name':obj.name, 'objects':dump}
-    
+
     # Refer to the __set_format__ method for an explanation
     # of the following construct.
     for keys in obj.__keys__:
@@ -236,9 +234,9 @@ def dump(obj, indentation=0):
                         val_str = 'INVALID TIME'
             else:
                 val_str = ''.join(filter(lambda c:c != '\0', str(val)))
-            
+
             dump.append( {
-                key: val_str, 
+                key: val_str,
                 'address': '0x%X'%(obj.__field_offsets__[key] + obj.__file_offset__),
                 'offset':  '0x%X'%(obj.__field_offsets__[key])
             })
@@ -296,24 +294,24 @@ def FUNCTIONS():
 
 ##############################################################
 ## Suspicious Functions API and Sections
-alerts = ['accept', 'AddCredentials', 'bind', 'CertDeleteCertificateFromStore', 'CheckRemoteDebuggerPresent', 
-'closesocket', 'connect', 'ConnectNamedPipe', 'CopyFile', 'CreateFile', 'CreateProcess', 'CreateToolhelp32Snapshot', 
-'CreateFileMapping', 'CreateRemoteThread', 'CreateDirectory', 'CreateService', 'CreateThread', 'CryptEncrypt', 'DeleteFile', 
-'DeviceIoControl', 'DisconnectNamedPipe', 'DNSQuery', 'EnumProcesses', 'ExitThread', 'FindWindow', 'FindResource', 
-'FindFirstFile', 'FindNextFile', 'FltRegisterFilter', 'FtpGetFile', 'FtpOpenFile', 'GetCommandLine', 'GetThreadContext', 
-'GetDriveType', 'GetFileSize', 'GetFileAttributes', 'GetHostByAddr', 'GetHostByName', 'GetHostName', 'GetModuleHandle', 
-'GetProcAddress', 'GetTempFileName', 'GetTempPath', 'GetTickCount', 'GetUpdateRect', 'GetUpdateRgn', 'GetUserNameA', 
+alerts = ['accept', 'AddCredentials', 'bind', 'CertDeleteCertificateFromStore', 'CheckRemoteDebuggerPresent',
+'closesocket', 'connect', 'ConnectNamedPipe', 'CopyFile', 'CreateFile', 'CreateProcess', 'CreateToolhelp32Snapshot',
+'CreateFileMapping', 'CreateRemoteThread', 'CreateDirectory', 'CreateService', 'CreateThread', 'CryptEncrypt', 'DeleteFile',
+'DeviceIoControl', 'DisconnectNamedPipe', 'DNSQuery', 'EnumProcesses', 'ExitThread', 'FindWindow', 'FindResource',
+'FindFirstFile', 'FindNextFile', 'FltRegisterFilter', 'FtpGetFile', 'FtpOpenFile', 'GetCommandLine', 'GetThreadContext',
+'GetDriveType', 'GetFileSize', 'GetFileAttributes', 'GetHostByAddr', 'GetHostByName', 'GetHostName', 'GetModuleHandle',
+'GetProcAddress', 'GetTempFileName', 'GetTempPath', 'GetTickCount', 'GetUpdateRect', 'GetUpdateRgn', 'GetUserNameA',
 'GetUrlCacheEntryInfo', 'GetComputerName', 'GetVersionEx', 'GetModuleFileName', 'GetStartupInfo', 'GetWindowThreadProcessId',
-'HttpSendRequest', 'HttpQueryInfo', 'IcmpSendEcho', 'IsDebuggerPresent', 'InternetCloseHandle', 'InternetConnect', 
-'InternetCrackUrl', 'InternetQueryDataAvailable', 'InternetGetConnectedState', 'InternetOpen', 'InternetQueryDataAvailable', 
-'InternetQueryOption', 'InternetReadFile', 'InternetWriteFile', 'LdrLoadDll', 'LoadLibrary', 'LoadLibraryA', 'LockResource', 
-'listen', 'MapViewOfFile', 'OutputDebugString', 'OpenFileMapping', 'OpenProcess', 'Process32First', 'Process32Next', 
-'recv', 'ReadProcessMemory', 'RegCloseKey', 'RegCreateKey', 'RegDeleteKey', 'RegDeleteValue', 'RegEnumKey', 'RegOpenKey', 
+'HttpSendRequest', 'HttpQueryInfo', 'IcmpSendEcho', 'IsDebuggerPresent', 'InternetCloseHandle', 'InternetConnect',
+'InternetCrackUrl', 'InternetQueryDataAvailable', 'InternetGetConnectedState', 'InternetOpen', 'InternetQueryDataAvailable',
+'InternetQueryOption', 'InternetReadFile', 'InternetWriteFile', 'LdrLoadDll', 'LoadLibrary', 'LoadLibraryA', 'LockResource',
+'listen', 'MapViewOfFile', 'OutputDebugString', 'OpenFileMapping', 'OpenProcess', 'Process32First', 'Process32Next',
+'recv', 'ReadProcessMemory', 'RegCloseKey', 'RegCreateKey', 'RegDeleteKey', 'RegDeleteValue', 'RegEnumKey', 'RegOpenKey',
 'send', 'sendto', 'SetKeyboardState', 'SetWindowsHook', 'ShellExecute', 'Sleep', 'socket', 'StartService', 'TerminateProcess',
-'UnhandledExceptionFilter', 'URLDownload', 'VirtualAlloc', 'VirtualProtect', 'VirtualAllocEx', 'WinExec', 'WriteProcessMemory', 
+'UnhandledExceptionFilter', 'URLDownload', 'VirtualAlloc', 'VirtualProtect', 'VirtualAllocEx', 'WinExec', 'WriteProcessMemory',
 'WriteFile', 'WSASend', 'WSASocket', 'WSAStartup', 'ZwQueryInformation']
 
-antidbgs = ['CheckRemoteDebuggerPresent', 'FindWindow', 'GetWindowThreadProcessId', 'IsDebuggerPresent', 
+antidbgs = ['CheckRemoteDebuggerPresent', 'FindWindow', 'GetWindowThreadProcessId', 'IsDebuggerPresent',
 'OutputDebugString', 'Process32First', 'Process32Next', 'TerminateProcess',  'UnhandledExceptionFilter', 'ZwQueryInformation']
 
 def APIALERT():
@@ -371,7 +369,7 @@ try:
 	results['resource'] = RESOURCE()
 	results['debug'] = DEBUG()
 except pefile.PEFormatError, pe_err:
-    results['error'] = unicode(pe_err) 
+    results['error'] = unicode(pe_err)
 except Exception, e:
 	traceback.print_exc()
 
